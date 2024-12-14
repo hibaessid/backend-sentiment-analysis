@@ -1,27 +1,25 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-from transformers import pipeline
+import requests
 
 app = Flask(__name__)
 CORS(app)
 
-# Load pre-trained sentiment analysis model
-sentiment_analysis = pipeline('sentiment-analysis', model="distilbert-base-uncased-finetuned-sst-2-english")
+# ML Model service URL
+ML_MODEL_SERVICE_URL = "http://127.0.0.1:5001/predict"
 
-# Serve the frontend index.html
-@app.route('/')
-def serve_frontend():
-    return send_from_directory('../frontend', 'index.html')
-
-# Define the sentiment analysis endpoint
 @app.route('/analyze', methods=['POST'])
 def analyze_sentiment():
     data = request.json
     text = data.get('text', '')
     if text:
-        result = sentiment_analysis(text)[0]
-        return jsonify({"label": result['label'], "score": result['score']})
+        # Make an HTTP request to the ML model service
+        response = requests.post(ML_MODEL_SERVICE_URL, json={"text": text})
+        if response.status_code == 200:
+            return jsonify(response.json())
+        else:
+            return jsonify({"error": "Failed to get a response from the ML model"}), 500
     return jsonify({"error": "No text provided"}), 400
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host='127.0.0.1', port=5000)
